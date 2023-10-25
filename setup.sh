@@ -4,7 +4,7 @@
 #################################### Pre defined variables ##################################
 #############################################################################################
 
-BackupDir='/mnt/nextcloud_backup'
+MountPoint='/mnt/nextcloud_backup'
 BackupRestoreConf='BackupRestore.conf'
 LogFile='/var/log/Rsync-$(date +%Y-%m-%d_%H-%M).txt'
 SourceDir='/'
@@ -90,14 +90,55 @@ disk_backup() {
   clear
 
   echo "Enter the backup drive mount point here."
-  echo "Default: ${BackupDir}"
+  echo "Default: ${MountPoint}"
   echo ""
-  read -p "Enter a directory or press ENTER if the backup directory is ${BackupDir}: " BACKUPDIR
+  read -p "Enter a directory or press ENTER if the backup directory is ${MountPoint}: " MOUNTPOINT
 
-  [ -z "$BACKUPDIR" ] ||  BackupDir=$BACKUPDIR
+  [ -z "$MOUNTPOINT" ] ||  MountPoint=$MOUNTPOINT
 
   clear
   }
+
+  # Function to BORG
+borg() {
+  echo "Enter the BORG_REPO here."
+  echo "Default: ${Borg_repo}"
+  echo ""
+  read -p "Enter a directory or press ENTER if the backup directory is ${Borg_repo}: " BORG_REPO
+
+  [ -z "$BORG_REPO" ] || Borg_repo=$BORG_REPO
+
+  # Ask the user for the Borg repository password
+  echo "Enter the Borg repository password:"
+  read -s BORG_PASS
+
+  # Ask the user if they want to encrypt the password
+  echo "Do you want to encrypt the password? (y/n)"
+  read ANSWER
+
+if [ "$ANSWER" = "y" ]; then
+  # Save the password in a file called 'pass'
+  echo $BORG_PASS > pass
+
+  # Encrypt the file using openssl
+  openssl enc -e -aes-256-cbc -a -md sha512 -pbkdf2 -iter 1000 -salt -in "pass" > "pass.enc" -pass pass:key
+
+  # Set the openssl decryption command in the BorgPassCommand variable
+  PASSCOMMAND="openssl enc -d -aes-256-cbc -a -md sha512 -pbkdf2 -iter 1000 -salt -in pass.enc -pass pass:key"
+
+  echo "The password has been encrypted and saved in the 'pass.enc' file."
+
+  rm pass
+else
+  # Save the password in the BorgPassphrase variable
+  BORG_PASSPHRASE=$BORG_PASS
+
+  echo "The password has been saved in the 'BORG_PASSPHRASE' environment variable."
+fi
+
+  clear
+
+}
 
 # Function to backup
 backup() {
@@ -119,11 +160,20 @@ backup() {
 # TODO: The uuid of the backup drive
 uuid='$uuid'
 
+# TODO: The Backup Drive Mount Point
+MountPoint='$MountPoint'
+
+# TODO: Borg Repository
+export BORG_REPO='$Borg_repo'
+
+# TODO: The Command to capture password
+export BORG_PASSCOMMAND="$PASSCOMMAND"
+
+# TODO: The password Borg
+export BORG_PASSPHRASE="$BORG_PASSPHRASE"
+
 # TODO: Directory to backup 
 SourceDir='$SourceDir'
-
-# TODO: The Backup Drive Mount Point
-BackupDir='$BackupDir'
 
 # Log File
 LogFile="$LogFile"
@@ -177,7 +227,16 @@ nextcloud() {
 uuid='$uuid'
 
 # TODO: The Backup Drive Mount Point
-BackupDir='$BackupDir'
+MountPoint='$MountPoint'
+
+# TODO: Borg Repository
+export BORG_REPO='$Borg_repo'
+
+# TODO: The Command to capture password
+export BORG_PASSCOMMAND="$PASSCOMMAND"
+
+# TODO: The password Borg
+export BORG_PASSPHRASE="$BORG_PASSPHRASE"
 
 # TODO: The service name of the web server. Used to start/stop web server (e.g. 'systemctl start <webserverServiceName>')
 webserverServiceName='$webserverServiceName'
@@ -312,7 +371,16 @@ configure_mediaserver() {
 uuid='$uuid'
 
 # TODO: The Backup Drive Mount Point
-BackupDir='$BackupDir'
+MountPoint='$MountPoint'
+
+# TODO: Borg Repository
+export BORG_REPO='$Borg_repo'
+
+# TODO: The Command to capture password
+export BORG_PASSCOMMAND="$PASSCOMMAND"
+
+# TODO: The password Borg
+export BORG_PASSPHRASE="$BORG_PASSPHRASE"
 
 # TODO: The service name of the media server. Used to start/stop web server (e.g. 'systemctl start <mediaserverServiceName>')
 MediaserverService='$MediaserverService'
@@ -398,7 +466,7 @@ configure_nextcloud_mediaserver() {
         ;;
       "Plex")
         MediaserverService="plexmediaserver"
-        MediaserverUser="plwx"
+        MediaserverUser="plex"
 
         echo "Enter the path to the Jellyfin file directory."
         echo "Usually: ${Plex_Conf}"
@@ -429,7 +497,16 @@ configure_nextcloud_mediaserver() {
 uuid='$uuid'
 
 # TODO: The Backup Drive Mount Point
-BackupDir='$BackupDir'
+MountPoint='$MountPoint'
+
+# TODO: Borg Repository
+export BORG_REPO='$Borg_repo'
+
+# TODO: The Command to capture password
+export BORG_PASSCOMMAND="$PASSCOMMAND"
+
+# TODO: The password Borg
+export BORG_PASSPHRASE="$BORG_PASSPHRASE"
 
 # TODO: The service name of the web server. Used to start/stop web server (e.g. 'systemctl start <webserverServiceName>')
 webserverServiceName='$webserverServiceName'
@@ -494,21 +571,25 @@ while true; do
   case $choice in
     1)
       disk_backup
+      borg
       backup
       cron
       ;;
     2)
       disk_backup
+      borg
       nextcloud
       cron
       ;;
     3)
       disk_backup
+      borg
       configure_mediaserver
       cron
       ;;      
     4)
       disk_backup
+      borg
       configure_nextcloud_mediaserver
       cron
       ;;
