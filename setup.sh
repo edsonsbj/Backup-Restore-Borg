@@ -4,8 +4,8 @@
 #################################### Pre defined variables ##################################
 #############################################################################################
 
-BackupDIsk='/mnt/nextcloud_backup'
-Borg_repo='$BackupDIsk/Borg'
+BackupDisk='/mnt/nextcloud_backup'
+Borg='Backups/Borg'
 BackupRestoreConf='BackupRestore.conf'
 LogFile='/var/log/Rsync-$(date +%Y-%m-%d_%H-%M).txt'
 SourceDir='/'
@@ -91,11 +91,53 @@ disk_backup() {
   clear
 
   echo "Enter the backup drive mount point here."
-  echo "Default: ${BackupDIsk}"
+  echo "Default: ${BackupDisk}"
   echo ""
-  read -p "Enter a directory or press ENTER if the backup directory is ${BackupDIsk}: " BACKUPDISK
+  read -p "Enter a directory or press ENTER if the backup directory is ${BackupDisk}: " BACKUPDISK
 
-  [ -z "$BACKUPDISK" ] ||  BackupDIsk=$BACKUPDISK
+  [ -z "$BACKUPDISK" ] ||  BackupDisk=$BACKUPDISK
+
+  clear
+
+}
+
+# Function to BORG
+borg() {
+  # Creation of the Directorate where the secrets is stored  
+  mkdir -p $HOME.Secrets
+  cd $HOME/.Secrets
+
+  echo "Enter the BORG_REPO here."
+  echo "Default: ${Borg}"
+  echo ""
+  read -p "Enter a directory or press ENTER if the backup directory is ${Borg}: " BORG
+
+  [ -z "$BORG" ] || Borg=$BORG
+
+  clear
+
+  # Ask the user for the Borg repository password
+  Passfile="$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)/pass"
+  echo "Enter the Borg repository password:"
+  read -s BORG_PASS
+
+  # Save the password in a file called 'pass'
+  echo $BORG_PASS > $Passfile
+
+  # Generate random key
+  Keyfile="$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)/key"
+  Key=$(openssl rand -out $Keyfile -base64 4096)
+
+  # Encrypt the file using openssl
+  PassfileEncr="$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)/pass.enc"
+  openssl enc -e -aes-256-cbc -a -md sha512 -pbkdf2 -iter 10000 -salt -in "$Passfile" > "$PassfileEncr" -pass file:"$Keyfile"
+
+  # Set the openssl decryption command in the BorgPassCommand variable
+  PASSCOMMAND="openssl enc -d -aes-256-cbc -a -md sha512 -pbkdf2 -iter 10000 -salt -in "$PassfileEncr" -pass file:"$Keyfile""
+
+  echo "The password has been encrypted and saved in the file."
+
+  rm $Passfile
 
   clear
 
@@ -114,57 +156,14 @@ BackupDisk='$BackupDisk'
 # Log File
 LogFile="$LogFile"
 
-EOF
-
-  clear
-
-}
-
-# Function to BORG
-borg() {
-  # Creation of the Directorate where the secrets is stored  
-  mkdir -p $HOME.Secrets
-  cd $HOME/.Secrets
-
-  echo "Enter the BORG_REPO here."
-  echo "Default: ${Borg_repo}"
-  echo ""
-  read -p "Enter a directory or press ENTER if the backup directory is ${Borg_repo}: " BORG_REPO
-
-  [ -z "$BORG_REPO" ] || Borg_repo=$BORG_REPO
-
-  # Ask the user for the Borg repository password
-  echo "Enter the Borg repository password:"
-  read -s BORG_PASS
-
-  # Save the password in a file called 'pass'
-  echo $BORG_PASS > $Passfile
-
-  # Generate random key
-  Keyfile="/path/to/keyfile"
-  Key=$(openssl rand -out $Keyfile -base64 4096)
-
-  # Encrypt the file using openssl
-  PassfileEncr="/path/to/encrypted/passfile"
-  openssl enc -e -aes-256-cbc -a -md sha512 -pbkdf2 -iter 10000 -salt -in "$Passfile" > "$PassfileEncr" -pass file:"$Keyfile"
-
-  # Set the openssl decryption command in the BorgPassCommand variable
-  PASSCOMMAND="openssl enc -d -aes-256-cbc -a -md sha512 -pbkdf2 -iter 10000 -salt -in "$PassfileEncr" -pass file:"$Keyfile""
-
-  echo "The password has been encrypted and saved in the file."
-
-  rm $Passfile
-
-  clear
-
-  tee -a ./"${BackupRestoreConf}" <<EOF
 # TODO: Borg Repository
-export BORG_REPO='$Borg_repo'
+export BORG_REPO='$BackupDisk/$Borg'
 
 # TODO: The Command to capture password
 export BORG_PASSCOMMAND="$PASSCOMMAND"
 
 EOF
+
   clear
 }
 
@@ -246,28 +245,36 @@ EOF
 
 # Função para configurar o cron
 cron() {
+  read -p "Do you want to configure backup in cron? [y/n]:" response
 
-# Ask user about backup time
-echo "Please enter the backup time in 24h format (MM:HH)"
-read time
+   if [ "$response" != "${response#[Yy]}" ] ;then
+    # Ask user about backup time
+    echo "Please enter the backup time in 24h format (MM:HH)"
+    read time
 
-clear
+  clear
 
-# Ask the user about the day of the week
-echo "Do you want to run the backup on a specific day of the week? (y/n)"
-read reply_day
+  # Ask the user about the day of the week
+  echo "Do you want to run the backup on a specific day of the week? (y/n)"
+  read reply_day
 
-if [ "$reply_day" == "s" ]; then
-    echo "Please enter the day of the week (0-6 where 0 is Sunday and 6 is Saturday)"
-    read day_week
+  if [ "$reply_day" == "s" ]; then
+      echo "Please enter the day of the week (0-6 where 0 is Sunday and 6 is Saturday)"
+      read day_week
+  else
+      day_week="*"
+  fi
+
+  clear
+
+  # Add the task to cron
+  (crontab -l 2>/dev/null; echo "$time * * $day_week $script_backup") | crontab -
+  
+  echo "Cron task configured successfully!"
+  
 else
-    day_week="*"
+  echo "Exiting the script without configuring a cron task."
 fi
-
-clear
-
-# Add the task to cron
-(crontab -l 2>/dev/null; echo "$time * * $day_week $script_backup") | crontab -
 }
 
 # Function to configure the media server
@@ -359,42 +366,74 @@ while true; do
       disk_backup
       borg
       backup
+
+      # Preparing scripts
       wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore/main/Backup.sh
       wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore/main/Restore.sh
       chmod 700 *.sh
       clear
+
+      # Cron
+      script_backup=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)'/Scripts/Backup.sh'
       cron
+      echo "Done!"
+      echo ""     
+      echo "IMPORTANT: Please check $BackupRestoreConf if all variables were set correctly BEFORE running the backup/restore scripts!"
       ;;
     2)
       disk_backup
       borg
       nextcloud
+
+      # Preparing scripts
       wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore/main/scripts/Nextcloud/Backup.sh
       wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore/main/scripts/Nextcloud/Restore.sh
       chmod 700 *.sh
       clear
+
+      # Cron
+      script_backup=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)'/Scripts/Backup.sh 3'
       cron
+      echo "Done!"
+      echo ""     
+      echo "IMPORTANT: Please check $BackupRestoreConf if all variables were set correctly BEFORE running the backup/restore scripts!"
       ;;
     3)
       disk_backup
       borg
       mediaserver
+
+      # Preparing scripts
       wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore/main/scripts/Media%20Server/Backup.sh
       wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore/main/scripts/Media%20Server/Restore.sh
       chmod 700 *.sh
       clear
+
+      # Cron
+      script_backup=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)'/Scripts/Backup.sh'
       cron
-      ;;      
+      echo "Done!"
+      echo ""     
+      echo "IMPORTANT: Please check $BackupRestoreConf if all variables were set correctly BEFORE running the backup/restore scripts!"
+      ;; 
     4)
       disk_backup
       borg
       nextcloud
       mediaserver
+
+      # Preparing scripts      
       wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore/main/scripts/Nextcloud%20%2B%20Media%20server%20/Backup.sh
       wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore/main/scripts/Nextcloud%20%2B%20Media%20server%20/Restore.sh
       chmod 700 *.sh
       clear
+
+      # Cron
+      script_backup=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)'/Scripts/Backup.sh 5'
       cron
+      echo "Done!"
+      echo ""     
+      echo "IMPORTANT: Please check $BackupRestoreConf if all variables were set correctly BEFORE running the backup/restore scripts!"
       ;;
     5)
       echo "Leaving the script."
@@ -405,9 +444,3 @@ while true; do
       ;;
   esac
 done
-
-echo ""
-echo "Done!"
-echo ""
-echo ""
-echo "IMPORTANT: Please check $BackupRestoreConf if all variables were set correctly BEFORE running the backup/restore scripts!"
