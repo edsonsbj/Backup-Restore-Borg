@@ -386,7 +386,7 @@ while true; do
       nextcloud
 
       # Preparing scripts
-      wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore/main/scripts/Nextcloud/Backup.sh
+      wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore-Borg/main/scripts/Nextcloud/Backup.sh
       wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore/main/scripts/Nextcloud/Restore.sh
       chmod 700 *.sh
       clear
