@@ -108,7 +108,7 @@ check_restore() {
 
 }
 
-# Function to backup Nextcloud settings
+# Function to restore Nextcloud settings
 nextcloud_settings() {
     echo "========== Backing up Nextcloud settings $( date )... =========="
     echo ""
@@ -141,7 +141,7 @@ nextcloud_settings() {
     start_webserver
 }
 
-# Function to backup Nextcloud DATA folder
+# Function to restore Nextcloud DATA folder
 nextcloud_data() {
     echo "========== Backing up Nextcloud DATA folder $( date )...=========="
     echo ""
@@ -196,7 +196,7 @@ nextcloud_complete() {
 
 # Check if an option was passed as an argument
 if [[ ! -z $1 ]]; then
-    # Execute the corresponding Backup option
+    # Execute the corresponding Restore option
     case $1 in
         1)
             nextcloud_settings
@@ -212,17 +212,17 @@ if [[ ! -z $1 ]]; then
             ;;
     esac
 else
-    # Display the menu to choose the Backup option
-    echo "Choose a Backup option:"
-    echo "1. Backup Nextcloud configurations and database."
-    echo "2. Backup only the Nextcloud data folder. Useful if the folder is stored elsewhere."
-    echo "3. Backup Nextcloud configurations, database, and data folder."
+    # Display the menu to choose the Restore option
+    echo "Choose a Restore option:"
+    echo "1. Restore Nextcloud configurations and database."
+    echo "2. Restore only the Nextcloud data folder. Useful if the folder is stored elsewhere."
+    echo "3. Restore Nextcloud configurations, database, and data folder."
     echo "4. To go out."
 
     # Read the option entered by the user
     read option
 
-    # Execute the corresponding Backup option
+    # Execute the corresponding Restore option
     case $option in
         1)
             nextcloud_settings
