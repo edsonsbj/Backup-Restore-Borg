@@ -141,13 +141,13 @@ if [[ ! -z $1 ]]; then
     # Execute the corresponding Backup option
     case $1 in
         1)
-            nextcloud_complete
-            ;;
-        2)
             nextcloud_settings
             ;;
-        3)
+        2)
             nextcloud_data
+            ;;
+        3)
+            nextcloud_complete
             ;;
         *)
             echo "Invalid option!"
@@ -156,9 +156,9 @@ if [[ ! -z $1 ]]; then
 else
     # Display the menu to choose the Backup option
     echo "Choose a Backup option:"
-    echo "1. Backup Nextcloud configurations, database, and data folder."
-    echo "2. Backup Nextcloud configurations and database."
-    echo "3. Backup only the Nextcloud data folder. Useful if the folder is stored elsewhere."
+    echo "1. Backup Nextcloud configurations and database."
+    echo "2. Backup only the Nextcloud data folder. Useful if the folder is stored elsewhere."
+    echo "3. Backup Nextcloud configurations, database, and data folder."
     echo "4. To go out."
 
     # Read the option entered by the user
@@ -167,13 +167,13 @@ else
     # Execute the corresponding Backup option
     case $option in
         1)
-            nextcloud_complete
-            ;;
-        2)
             nextcloud_settings
             ;;
-        3)
+        2)
             nextcloud_data
+            ;;
+        3)
+            nextcloud_complete
             ;;
         4)
             echo "Leaving the script."
