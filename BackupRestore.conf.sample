@@ -12,7 +12,16 @@
 uuid='123456789ABCDEFGH'
 
 # TODO: The Backup Drive Mount Point
-BackupDir='/mnt/Backup'
+BackupDisk='/mnt/Backup'
+
+# Log File
+LogFile="/var/log/Rsync-$(date +%Y-%m-%d_%H-%M).txt"
+
+# TODO: Borg Repository
+export BORG_REPO='/mnt/Arquivos/Backups/Borg'
+
+# TODO: The Command to capture password
+export BORG_PASSCOMMAND="openssl enc -d -aes-256-cbc -a -md sha512 -pbkdf2 -iter 10000 -salt -in pass.enc -pass file:key"
 
 # TODO: Directory to backup 
 SourceDir='/'
@@ -50,5 +59,3 @@ MediaserverUser='plex'
 # TODO: The directory where the Media Server settings are stored (this directory is stored within /var/lib)
 MediaserverConf='/var/lib/plexmediaserver/Library/Application Support/Plex Media Server'
 
-# Log File
-LogFile="/var/log/Rsync-$(date +%Y-%m-%d_%H-%M).txt"
