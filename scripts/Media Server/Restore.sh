@@ -29,13 +29,13 @@ fi
 echo "========== The unit with UUID $uuid is connected and corresponds to the device $device. =========="
 
 # Check that the unit is assembled
-if grep -qs "$MountPoint" /proc/mounts; then
+if grep -qs "BackupDisk" /proc/mounts; then
   echo "========== The unit is assembled ==========."
 else
   echo "========== The unit is not assembled. Trying to assemble...=========="
 
   # Try to assemble the unit
-  if mount "$device" "$MountPoint"; then
+  if mount "$device" "BackupDisk"; then
     echo "========== The unit was successfully assembled.=========="
   else
     echo "========== Failure when setting up the unit. Leaving the script.=========="
@@ -44,7 +44,7 @@ else
 fi
 
 # Are there write and read permissions?
-if [ ! -w "$MountPoint" ]; then
+if [ ! -w "BackupDisk" ]; then
     echo "========== No write permissions =========="
     exit 1
 fi
