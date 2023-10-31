@@ -29,13 +29,13 @@ fi
 echo "========== The unit with UUID $uuid is connected and corresponds to the device $device. =========="
 
 # Check that the unit is assembled
-if grep -qs "$MountPoint" /proc/mounts; then
+if grep -qs "BackupDisk" /proc/mounts; then
   echo "========== The unit is assembled ==========."
 else
   echo "========== The unit is not assembled. Trying to assemble...=========="
 
   # Try to assemble the unit
-  if mount "$device" "$MountPoint"; then
+  if mount "$device" "BackupDisk"; then
     echo "========== The unit was successfully assembled.=========="
   else
     echo "========== Failure when setting up the unit. Leaving the script.=========="
@@ -44,7 +44,7 @@ else
 fi
 
 # Are there write and read permissions?
-if [ ! -w "$MountPoint" ]; then
+if [ ! -w "BackupDisk" ]; then
     echo "========== No write permissions =========="
     exit 1
 fi
@@ -110,7 +110,7 @@ check_restore() {
 
 # Function to restore Nextcloud settings
 nextcloud_settings() {
-    echo "========== Backing up Nextcloud settings $( date )... =========="
+    echo "========== Restoring Nextcloud settings $( date )... =========="
     echo ""
 
     check_restore
@@ -134,16 +134,15 @@ nextcloud_settings() {
 
     # Removing unnecessary files
     rm "$NextcloudConfig/nextclouddb.sql"
-    rm -rf '$NextcloudConfig.old/'
 
     nextcloud_disable
 
-    start_webserver
+    start_webserver    
 }
 
 # Function to restore Nextcloud DATA folder
 nextcloud_data() {
-    echo "========== Backing up Nextcloud DATA folder $( date )...=========="
+    echo "========== Restoring Nextcloud DATA folder $( date )...=========="
     echo ""
 
     check_restore
@@ -160,8 +159,9 @@ nextcloud_data() {
     nextcloud_disable
 }
 
+# Function to restore Nextcloud
 nextcloud_complete() {
-    echo "========== Backing up Nextcloud $( date )... =========="
+    echo "========== Restoring Nextcloud $( date )... =========="
     echo ""
 
     check_restore
@@ -187,8 +187,7 @@ nextcloud_complete() {
 
     # Removing unnecessary files
     rm "$NextcloudConfig/nextclouddb.sql"
-    rm -rf '$NextcloudConfig.old/'
-
+    
     nextcloud_disable
 
     start_webserver
@@ -244,4 +243,12 @@ else
             echo "Invalid option!"
             ;;
     esac
+fi
+
+# Worked well? Unmount.
+if [ "$?" = "0" ]; then
+    echo ""
+    echo "========== Backup completed. The removable drive has been unmounted and powered off. =========="
+    umount "/dev/disk/by-uuid/$uuid"
+    sudo udisksctl power-off -b "/dev/disk/by-uuid/$uuid"
 fi

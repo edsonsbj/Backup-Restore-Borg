@@ -30,13 +30,13 @@ fi
 echo "========== The unit with UUID $uuid is connected and corresponds to the device $device. =========="
 
 # Check that the unit is assembled
-if grep -qs "$MountPoint" /proc/mounts; then
+if grep -qs "BackupDisk" /proc/mounts; then
   echo "========== The unit is assembled ==========."
 else
   echo "========== The unit is not assembled. Trying to assemble...=========="
 
   # Try to assemble the unit
-  if mount "$device" "$MountPoint"; then
+  if mount "$device" "BackupDisk"; then
     echo "========== The unit was successfully assembled.=========="
   else
     echo "========== Failure when setting up the unit. Leaving the script.=========="
@@ -45,7 +45,7 @@ else
 fi
 
 # Are there write and read permissions?
-if [ ! -w "$MountPoint" ]; then
+if [ ! -w "BackupDisk" ]; then
     echo "========== No write permissions =========="
     exit 1
 fi
@@ -86,17 +86,19 @@ nextcloud_settings() {
     stop_webserver
 
    	# Export the database.
-	mysqldump --quick -n --host=localhost $NextcloudDatabase --user=$DBUser --password=$DBPassword > "$NextcloudConfig/nextclouddb_.sql"
+	mysqldump --quick -n --host=localhost $NextcloudDatabase --user=$DBUser --password=$DBPassword > "$NextcloudConfig/nextclouddb.sql"
 
+    # Backup
     borg create $BORG_OPTS ::'NextcloudConfigs-{now:%Y%m%d-%H%M}' $NextcloudConfig --exclude $NextcloudDataDir
 
     backup_exit=$?
 
-    rm "$NextcloudConfig/nextclouddb_.sql"
-
-    nextcloud_disable
+    # Remove the database 
+    rm "$NextcloudConfig/nextclouddb.sql"
 
     start_webserver
+
+    nextcloud_disable
 }
 
 # Function to backup Nextcloud DATA folder
@@ -123,13 +125,15 @@ nextcloud_complete() {
     stop_webserver
 
    	# Export the database.
-	mysqldump --quick -n --host=localhost $NextcloudDatabase --user=$DBUser --password=$DBPassword > "$NextcloudConfig/nextclouddb_.sql"
+	mysqldump --quick -n --host=localhost $NextcloudDatabase --user=$DBUser --password=$DBPassword > "$NextcloudConfig/nextclouddb.sql"
 
+    # Backup
     borg create $BORG_OPTS ::'NextcloudFull-{now:%Y%m%d-%H%M}' $NextcloudConfig $NextcloudDataDir --exclude "$NextcloudDataDir/*/files_trashbin"
 
     backup_exit=$?
 
-    rm "$NextcloudConfig/nextclouddb_.sql"
+    # Remove the database
+    rm "$NextcloudConfig/nextclouddb.sql"
 
     start_webserver
 
