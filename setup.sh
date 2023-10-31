@@ -368,8 +368,8 @@ while true; do
       backup
 
       # Preparing scripts
-      wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore/main/Backup.sh
-      wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore/main/Restore.sh
+      wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore-Borg/main/Backup.sh
+      wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore-Borg/main/Restore.sh
       chmod 700 *.sh
       clear
 
@@ -404,8 +404,8 @@ while true; do
       mediaserver
 
       # Preparing scripts
-      wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore/main/scripts/Media%20Server/Backup.sh
-      wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore/main/scripts/Media%20Server/Restore.sh
+      wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore-Borg/main/scripts/Media%20Server/Backup.sh
+      wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore-Borg/main/scripts/Media%20Server/Restore.sh
       chmod 700 *.sh
       clear
 
@@ -423,8 +423,8 @@ while true; do
       mediaserver
 
       # Preparing scripts      
-      wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore/main/scripts/Nextcloud%20%2B%20Media%20server%20/Backup.sh
-      wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore/main/scripts/Nextcloud%20%2B%20Media%20server%20/Restore.sh
+      wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore-Borg/main/scripts/Nextcloud%20%2B%20Media%20server%20/Backup.sh
+      wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore-Borg/main/scripts/Nextcloud%20%2B%20Media%20server%20/Restore.sh
       chmod 700 *.sh
       clear
 
