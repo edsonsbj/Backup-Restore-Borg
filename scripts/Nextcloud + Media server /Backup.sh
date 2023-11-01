@@ -153,7 +153,42 @@ nextcloud_complete() {
 
 # Function to backup Nextcloud and Media Server settings
 nextcloud_mediaserver_settings() {
-    BORG_EXCLUDE="--exclude '$NextcloudDataDir' --exclude '$MediaserverConf/Cache*' --exclude '$MediaserverConf/cache' --exclude '$MediaserverConf/Crash Reports' --exclude '$MediaserverConf/Diagnostics' --exclude '$MediaserverConf/Logs' --exclude '$MediaserverConf/logs' --exclude '$MediaserverConf/transcoding-temp'"
+    # Filters for Inclusion Exclusion Borg
+    BorgFilters="./patterns.lst"
+
+    # Create a file with the delete standards Borg Inclusion
+    tee -a "$BorgFilters" <<EOF
+P sh
+R /
+
+# DO NOT LOOK IN THESE FOLDERS
+! proc
+
+# DIRECTORIES TO BE EXCLUDED FROM BACKUP  
+
+# Media Server
+- $MediaserverConf/Cache
+- $MediaserverConf/cache
+- $MediaserverConf/Crash Reports
+- $MediaserverConf/Diagnostics
+- $MediaserverConf/Logs
+- $MediaserverConf/logs
+- $MediaserverConf/transcoding-temp
+
+# NEXTCLOUD
+- $NextcloudDataDir
+
+# DIRECTORIES FOR BACKUP 
+
+# Media Server Include
++ $MediaserverConf/
+
+# NEXTCLOUD - SETTINGS
++ $NextcloudConfig/
+
+# DO NOT INCLUDE ANY MORE FILES
+- **
+EOF
 
     echo "========== Backing up Nextcloud and Media Server settings $( date )... =========="
     echo ""
@@ -168,12 +203,13 @@ nextcloud_mediaserver_settings() {
 	mysqldump --quick -n --host=localhost $NextcloudDatabase --user=$DBUser --password=$DBPassword > "$NextcloudConfig/nextclouddb.sql"
 
     # Backup
-    borg create $BORG_OPTS $BORG_EXCLUDE ::'SettingsServer-{now:%Y%m%d-%H%M}' "$NextcloudConfig" "$MediaserverConf"
+    borg create $BORG_OPTS --patterns-from "$BorgFilters" ::'SettingsServer-{now:%Y%m%d-%H%M}'
 
     backup_exit=$?
 
-    # Remove the database
+    # Remove unnecessary files
     rm "$NextcloudConfig/nextclouddb.sql"
+    rm "$BorgFilters"
 
     nextcloud_disable
 
@@ -182,13 +218,49 @@ nextcloud_mediaserver_settings() {
     start_mediaserver
 }
 
-# Function to perform a complete Nextcloud and Media Server Settings backup
+# Function to backup Nextcloud and Media Server settings
 nextcloud_mediaserver_complete() {
-    BORG_EXCLUDE=" --exclude '$NextcloudDataDir/*/files_trashbin' --exclude '$MediaserverConf/Cache*' --exclude '$MediaserverConf/cache' --exclude '$MediaserverConf/Crash Reports' --exclude '$MediaserverConf/Diagnostics' --exclude '$MediaserverConf/Logs' --exclude '$MediaserverConf/logs' --exclude '$MediaserverConf/transcoding-temp'"
+    # Filters for Inclusion Exclusion Borg
+    BorgFilters="./patterns.lst"
 
-    echo "========== Backing up Nextcloud and Media Server $( date )... =========="
+    # Create a file with the delete standards Borg Inclusion
+    tee -a "$BorgFilters" <<EOF
+P sh
+R /
+
+# DO NOT LOOK IN THESE FOLDERS
+! proc
+
+# DIRECTORIES TO BE EXCLUDED FROM BACKUP  
+
+# Media Server
+- $MediaserverConf/Cache
+- $MediaserverConf/cache
+- $MediaserverConf/Crash Reports
+- $MediaserverConf/Diagnostics
+- $MediaserverConf/Logs
+- $MediaserverConf/logs
+- $MediaserverConf/transcoding-temp
+
+# NEXTCLOUD
+- $NextcloudDataDir/*/files_trashbin
+
+# DIRECTORIES FOR BACKUP 
+
+# Media Server Include
++ $MediaserverConf/
+
+# NEXTCLOUD - SETTINGS
++ $NextcloudConfig/
++ $NextcloudDataDir/
+
+# DO NOT INCLUDE ANY MORE FILES
+- **
+EOF
+
+    echo "========== Backing up Nextcloud and Media Server settings $( date )... =========="
     echo ""
-    
+
     nextcloud_enable
 
     stop_webserver
@@ -199,16 +271,17 @@ nextcloud_mediaserver_complete() {
 	mysqldump --quick -n --host=localhost $NextcloudDatabase --user=$DBUser --password=$DBPassword > "$NextcloudConfig/nextclouddb.sql"
 
     # Backup
-    borg create $BORG_OPTS $BORG_EXCLUDE ::'NextcloudFull-{now:%Y%m%d-%H%M}' "$NextcloudConfig" "$NextcloudDataDir" "$MediaserverConf"
+    borg create $BORG_OPTS --patterns-from "$BorgFilters" ::'SettingsServer-{now:%Y%m%d-%H%M}'
 
     backup_exit=$?
 
-    # Remove the database
+    # Remove unnecessary files
     rm "$NextcloudConfig/nextclouddb.sql"
-
-    start_webserver
+    rm "$BorgFilters"
 
     nextcloud_disable
+
+    start_webserver
 
     start_mediaserver
 }

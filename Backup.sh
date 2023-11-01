@@ -1,8 +1,7 @@
 #!/bin/bash
 
-DIR="$(dirname "${BASH_SOURCE[0]}")"
-CONFIG="$DIR/BackupRestore.conf"
-. "$CONFIG"
+CONFIG="$(dirname "${BASH_SOURCE[0]}")/BackupRestore.conf"
+. $CONFIG
 
 # Create a log file to record command outputs
 touch "$LogFile"
@@ -54,12 +53,13 @@ fi
 ## -------------------------- MAIN SCRIPT -------------------------- #
 # Function to backup
 backup() {
-
   BORG_OPTS="--verbose --filter AME --list --progress --stats --show-rc --compression lz4 --exclude-caches"
 
-  exclude="./exclude.txt"
+  # Filters for Inclusion Exclusion Borg
+  BorgFilters="./patterns.lst"
 
-  tee -a "$exclude" <<EOF
+  # Create a file with the delete standards Borg Inclusion
+  tee -a "$BorgFilters" <<EOF
 P sh
 R /
 

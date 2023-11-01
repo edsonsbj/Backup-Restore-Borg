@@ -51,12 +51,37 @@ if [ ! -w "$BackupDisk" ]; then
 fi
 
 ## -------------------------- MAIN SCRIPT -------------------------- #
-
-BORG_OPTS="--verbose --filter AME --list --progress --stats --show-rc --compression lz4 --exclude-caches"
-BORG_EXCLUDE="--exclude '$MediaserverConf/Cache*' --exclude '$MediaserverConf/cache' --exclude '$MediaserverConf/Crash Reports' --exclude '$MediaserverConf/Diagnostics' --exclude '$MediaserverConf/Logs' --exclude '$MediaserverConf/logs' --exclude '$MediaserverConf/transcoding-temp'"
-
 # Function to backup
 backup() {
+    BORG_OPTS="--verbose --filter AME --list --progress --stats --show-rc --compression lz4 --exclude-caches"
+
+    # Filters for Inclusion Exclusion Borg
+    BorgFilters="./patterns.lst"
+
+    # Create a file with the delete standards Borg Inclusion
+    tee -a "$BorgFilters" <<EOF
+P sh
+R /
+
+# DO NOT LOOK IN THESE FOLDERS
+! proc
+
+# DIRECTORIES TO BE EXCLUDED FROM BACKUP  
+- $MediaserverConf/Cache
+- $MediaserverConf/cache
+- $MediaserverConf/Crash Reports
+- $MediaserverConf/Diagnostics
+- $MediaserverConf/Logs
+- $MediaserverConf/logs
+- $MediaserverConf/transcoding-temp
+
+# DIRECTORIES FOR BACKUP 
++ $MediaserverConf/
+
+# DO NOT INCLUDE ANY MORE FILES
+- **
+EOF
+
     echo "========== Backing up $( date )... =========="
     echo ""
 
@@ -64,9 +89,12 @@ backup() {
     systemctl stop "$MediaserverService"
 
     # Backup
-    borg create $BORG_OPTS $BORG_EXCLUDE ::'MediaServer-{now:%Y%m%d-%H%M}' "$MediaserverConf"
+    borg create $BORG_OPTS patternsFrom "$BorgFilters" ::'MediaServer-{now:%Y%m%d-%H%M}' "$MediaserverConf"
 
     backup_exit=$?
+
+    # Remove unnecessary files
+    rm "$BorgFilters"
 
     # Start Media Server
     systemctl start "$MediaserverService"
