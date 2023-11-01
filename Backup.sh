@@ -1,7 +1,8 @@
 #!/bin/bash
 
-CONFIG="$(dirname "${BASH_SOURCE[0]}")/BackupRestore.conf"
-. $CONFIG
+DIR="$(dirname "${BASH_SOURCE[0]}")"
+CONFIG="$DIR/BackupRestore.conf"
+. "$CONFIG"
 
 # Create a log file to record command outputs
 touch "$LogFile"
@@ -30,13 +31,13 @@ fi
 echo "========== The unit with UUID $uuid is connected and corresponds to the device $device. =========="
 
 # Check that the unit is assembled
-if grep -qs "BackupDisk" /proc/mounts; then
+if grep -qs "$BackupDisk" /proc/mounts; then
   echo "========== The unit is assembled ==========."
 else
   echo "========== The unit is not assembled. Trying to assemble...=========="
 
   # Try to assemble the unit
-  if mount "$device" "BackupDisk"; then
+  if mount "$device" "$backupDisk"; then
     echo "========== The unit was successfully assembled.=========="
   else
     echo "========== Failure when setting up the unit. Leaving the script.=========="
@@ -45,23 +46,47 @@ else
 fi
 
 # Are there write and read permissions?
-if [ ! -w "BackupDisk" ]; then
+if [ ! -w "$BackupDisk" ]; then
     echo "========== No write permissions =========="
     exit 1
 fi
 
 ## -------------------------- MAIN SCRIPT -------------------------- #
-
-BORG_OPTS="--verbose --filter AME --list --progress --stats --show-rc --compression lz4 --exclude-caches"
-BORG_EXCLUDE="--exclude '/dev' --exclude '/proc' --exclude '/sys' --exclude '/tmp' --exclude '/run' --exclude '/mnt' --exclude '/media' --exclude '/lost+found'"
-
 # Function to backup
 backup() {
+
+  BORG_OPTS="--verbose --filter AME --list --progress --stats --show-rc --compression lz4 --exclude-caches"
+
+  exclude="./exclude.txt"
+
+  tee -a "$exclude" <<EOF
+P sh
+R /
+
+# DO NOT LOOK IN THESE FOLDERS
+! proc
+
+# DIRECTORIES TO BE EXCLUDED FROM BACKUP  
+- /dev
+- /sys
+- /tmp
+- /run
+- /mnt
+- /media
+- /lost+found
+
++ /home/*
++ /root/*
+
+# DO NOT INCLUDE ANY MORE FILES
+- **
+EOF
+
     echo "========== Backing up $( date )... =========="
     echo ""
 
     # Backup
-    borg create $BORG_OPTS $BORG_EXCLUDE ::'Full-{now:%Y%m%d-%H%M}' "$SourceDir"
+    borg create $BORG_OPTS --patterns-from $exclude ::'Full-{now:%Y%m%d-%H%M}'
 
     backup_exit=$?
 
