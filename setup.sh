@@ -10,6 +10,7 @@ BackupRestoreConf='BackupRestore.conf'
 LogFile='/var/log/Rsync-$(date +%Y-%m-%d_%H-%M).txt'
 SourceDir='/'
 webserverServiceName='nginx'
+NextcloudSnapConfig='/var/snap/nextcloud/common/backups/'
 NextcloudConfig='/var/www/nextcloud'
 script_backup=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)/Scripts/Backup.sh
 Plex_Conf='/var/lib/plexmediaserver/Library/Application Support/Plex Media Server' # Diretório de configuração do Plex
@@ -237,6 +238,34 @@ DBUser='$DBUser'
 
 # TODO: The password of the Nextcloud database user
 DBPassword='$DBPassword'
+
+EOF
+
+  clear
+}
+
+# Function to backup Nextcloud settings
+nextcloud_snap() {
+  echo "Enter the path to the directory where Nextcloud stores Backups."
+  echo "Usually: ${NextcloudSnapConfig}"
+  echo ""
+  read -p "Enter a directory or press ENTER if the file directory is ${NextcloudSnapConfig}: " NEXTCLOUDCONF
+
+  [ -z "$NEXTCLOUDSNAPCONF" ] ||  NextcloudSnapConfig=$NEXTCLOUDSNAPCONF
+  clear
+
+  NextcloudDataDir=$(sudo nextcloud.occ config:system:get datadirectory)
+    
+  clear
+
+  tee -a ./"${BackupRestoreConf}" <<EOF
+# TODO: The directory of your Nextcloud installation (this is a directory under your web root)
+NextcloudConfig='$NextcloudSnapConfig'
+
+# TODO: The directory of your Nextcloud data directory (outside the Nextcloud file directory)
+# If your data directory is located in the Nextcloud files directory (somewhere in the web root),
+# the data directory must not be a separate part of the backup
+NextcloudDataDir='$NextcloudDataDir'
 
 EOF
 
