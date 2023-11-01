@@ -67,6 +67,8 @@ check_restore() {
         exit 1
     fi
 
+    ARCHIVE_DATE=$1
+
     # Check if the restoration date is specified
     if [ -z "$ARCHIVE_DATE" ]
     then
