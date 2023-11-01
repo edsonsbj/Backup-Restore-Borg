@@ -384,9 +384,11 @@ while true; do
   echo "Choose an option:"
   echo "1. Backup"
   echo "2. Backup Nextcloud"
-  echo "3. Backup Media Server"
-  echo "4. Backup Nextcloud + Media Server"
-  echo "5. To go out"
+  echo "3. Backup Nextcloud SNAP"
+  echo "4. Backup Media Server"
+  echo "5. Backup Nextcloud + Media Server"
+  echo "6. Backup Nextcloud SNAP + Media Server"  
+  echo "7. To go out"
 
   read choice
 
@@ -430,6 +432,24 @@ while true; do
     3)
       disk_backup
       borg
+      nextcloud_snap
+
+      # Preparing scripts
+      wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore-Borg/main/scripts/Nextcloud%20-%20%20SNAP/Backup.sh
+      wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore-Borg/main/scripts/Nextcloud%20-%20%20SNAP/Restore.sh
+      chmod 700 *.sh
+      clear
+
+      # Cron
+      script_backup=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)'/Scripts/Backup.sh 3'
+      cron
+      echo "Done!"
+      echo ""     
+      echo "IMPORTANT: Please check $BackupRestoreConf if all variables were set correctly BEFORE running the backup/restore scripts!"
+      ;;      
+    4)
+      disk_backup
+      borg
       mediaserver
 
       # Preparing scripts
@@ -445,7 +465,7 @@ while true; do
       echo ""     
       echo "IMPORTANT: Please check $BackupRestoreConf if all variables were set correctly BEFORE running the backup/restore scripts!"
       ;; 
-    4)
+    5)
       disk_backup
       borg
       nextcloud
@@ -464,7 +484,26 @@ while true; do
       echo ""     
       echo "IMPORTANT: Please check $BackupRestoreConf if all variables were set correctly BEFORE running the backup/restore scripts!"
       ;;
-    5)
+    6)
+      disk_backup
+      borg
+      nextcloud_snap
+      mediaserver
+
+      # Preparing scripts
+      wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore-Borg/main/scripts/Nextcloud%20%20SNAP%20%2B%20Media%20server/Backup.sh
+      wget https://raw.githubusercontent.com/edsonsbj/Backup-Restore-Borg/main/scripts/Nextcloud%20%20SNAP%20%2B%20Media%20server/Restore.sh
+      chmod 700 *.sh
+      clear
+
+      # Cron
+      script_backup=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)'/Scripts/Backup.sh 3'
+      cron
+      echo "Done!"
+      echo ""     
+      echo "IMPORTANT: Please check $BackupRestoreConf if all variables were set correctly BEFORE running the backup/restore scripts!"
+      ;;            
+    7)
       echo "Leaving the script."
       exit 0
       ;;
