@@ -257,7 +257,7 @@ fi
 # Worked well? Unmount.
 if [ "$?" = "0" ]; then
     echo ""
-    echo "========== Restore     completed. The removable drive has been unmounted and powered off. =========="
+    echo "========== Restore completed. The removable drive has been unmounted and powered off. =========="
     umount "/dev/disk/by-uuid/$uuid"
     sudo udisksctl power-off -b "/dev/disk/by-uuid/$uuid"
 fi
