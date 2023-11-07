@@ -87,7 +87,6 @@ check_restore() {
 
 # Function to Restore 
 Restore() {
-
     check_restore
 
     echo "========== Restoring settings $( date )... =========="
