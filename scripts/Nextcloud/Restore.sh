@@ -65,8 +65,7 @@ check_restore() {
     # Check if the restoration date is specified
     if [ -z "$ARCHIVE_DATE" ]
     then
-        echo "Enter the restoration date (YYYY-MM-DD):"
-        read ARCHIVE_DATE
+        read -p "Enter the restoration date (YYYY-MM-DD): " ARCHIVE_DATE
     if [ -z "$ARCHIVE_DATE" ]
     then
         echo "No date provided. Going off script."

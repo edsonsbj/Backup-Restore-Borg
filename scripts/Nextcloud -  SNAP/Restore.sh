@@ -65,8 +65,7 @@ check_restore() {
     # Check if the restoration date is specified
     if [ -z "$ARCHIVE_DATE" ]
     then
-        echo "Enter the restoration date (YYYY-MM-DD):"
-        read ARCHIVE_DATE
+        read -p "Enter the restoration date (YYYY-MM-DD): " ARCHIVE_DATE
     if [ -z "$ARCHIVE_DATE" ]
     then
         echo "No date provided. Going off script."
@@ -222,7 +221,7 @@ fi
 # Worked well? Unmount.
 if [ "$?" = "0" ]; then
     echo ""
-    echo "========== Backup completed. The removable drive has been unmounted and powered off. =========="
+    echo "========== Restore completed. The removable drive has been unmounted and powered off. =========="
     umount "/dev/disk/by-uuid/$uuid"
     sudo udisksctl power-off -b "/dev/disk/by-uuid/$uuid"
 fi
