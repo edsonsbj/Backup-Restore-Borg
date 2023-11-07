@@ -60,6 +60,7 @@ if [ ! -w "$BackupDisk" ]; then
 fi
 
 # -------------------------------FUNCTIONS----------------------------------------- #
+# Obtaining file information and dates to be restored
 check_restore() {
     # Check if the restoration date is specified
     if [ -z "$ARCHIVE_DATE" ]
@@ -138,9 +139,9 @@ nextcloud_settings() {
     chmod -R 755 $NextcloudConfig
     chown -R www-data:www-data $NextcloudConfig
 
-    nextcloud_disable
-
     start_webserver    
+
+    nextcloud_disable
 
     # Removing unnecessary files
     rm "$NextcloudConfig/nextclouddb.sql"
@@ -196,9 +197,9 @@ nextcloud_complete() {
     chmod -R 770 $NextcloudDataDir 
     chown -R www-data:www-data $NextcloudDataDir
 
-    nextcloud_disable
-
     start_webserver
+
+    nextcloud_disable
 
     # Removing unnecessary files
     rm "$NextcloudConfig/nextclouddb.sql"
