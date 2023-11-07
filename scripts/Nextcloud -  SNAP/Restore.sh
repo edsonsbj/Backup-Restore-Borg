@@ -3,6 +3,8 @@
 CONFIG="$(dirname "${BASH_SOURCE[0]}")/BackupRestore.conf"
 . $CONFIG
 
+ARCHIVE_DATE=$2
+
 # Create a log file to record command outputs
 touch "$LogFile"
 exec > >(tee -a "$LogFile")
@@ -12,11 +14,19 @@ exec 2>&1
 errorecho() { cat <<< "$@" 1>&2; } 
 
 ## ---------------------------------- TESTS ------------------------------ #
-
 # Check if the script is being executed by root or with sudo
 if [[ $EUID -ne 0 ]]; then
    echo "========== This script needs to be executed as root or with sudo. ==========" 
    exit 1
+fi
+
+# Change to the root directory, and exit with an error message if it fails
+if cd /; then
+    echo "Changed to the root directory ($(pwd))"
+    echo "Location of the database backup file is /"
+else
+    echo "Failed to change to the root directory. Restoration failed."
+    exit 1
 fi
 
 device=$(blkid -U "$uuid")
@@ -52,28 +62,17 @@ fi
 # -------------------------------FUNCTIONS----------------------------------------- #
 # Obtaining file information and dates to be restored
 check_restore() {
-    # Change to the root directory. This is critical because borg extract uses relative directory, so we must change to the root of the system to avoid errors or random directories during restoration.
-
-    echo "Changing to the root directory..."
-    cd /
-    echo "pwd is $(pwd)"
-    echo "location of the database backup file is " '/'
-
-    if [ $? -eq 0 ]; then
-        echo "Done"
-    else
-        echo "Failed to change to the root directory. Restoration failed."
-        exit 1
-    fi
-
-    ARCHIVE_DATE=$1
-
     # Check if the restoration date is specified
     if [ -z "$ARCHIVE_DATE" ]
     then
-        echo "Please specify the restoration date."
+        echo "Enter the restoration date (YYYY-MM-DD):"
+        read ARCHIVE_DATE
+    if [ -z "$ARCHIVE_DATE" ]
+    then
+        echo "No date provided. Going off script."
         exit 1
     fi
+ fi
 
     # Find the backup file name corresponding to the specified date
     ARCHIVE_NAME=$(borg list $BORG_REPO | grep $ARCHIVE_DATE | awk '{print $1}')
@@ -109,13 +108,16 @@ nextcloud_settings() {
 
 # Function to restore Nextcloud DATA folder
 nextcloud_data() {
-    echo "========== Restoring Nextcloud DATA folder $( date )...=========="
-    echo ""
 
     check_restore
 
-    # Enable maintenance mode
-    sudo nextcloud.occ maintenance:mode --on
+    # Enabling Maintenance Mode
+    echo "============ Enabling Maintenance Mode... ============"
+	sudo nextcloud.occ maintenance:mode --on
+    echo ""
+
+    echo "========== Restoring Nextcloud DATA folder $( date )...=========="
+    echo ""
 
     # Extract Files
     borg extract -v --list $BORG_REPO::$ARCHIVE_NAME $NextcloudDataDir
@@ -124,22 +126,27 @@ nextcloud_data() {
     chmod -R 770 $NextcloudDataDir 
     chown -R www-data:www-data $NextcloudDataDir
 
-    # DIsable maintenance mode
-    sudo nextcloud.occ maintenance:mode --off
+    # Disabling Maintenance Mode
+    echo "============ Disabling Maintenance Mode... ============"
+	sudo nextcloud.occ maintenance:mode --off
+    echo ""
 }
 
 # Function to restore Nextcloud
 nextcloud_complete() {
-    echo "========== Restoring Nextcloud $( date )... =========="
-    echo ""
 
     check_restore
 
-    # Enable maintenance mode
-    sudo nextcloud.occ maintenance:mode --on
+    # Enabling Maintenance Mode
+    echo "============ Enabling Maintenance Mode... ============"
+	sudo nextcloud.occ maintenance:mode --on
+    echo ""
 
     # Enable Midias Removevel
     sudo snap connect nextcloud:removable-media
+
+    echo "========== Restoring Nextcloud $( date )... =========="
+    echo ""
 
     # Extract Files
     borg extract -v --list $BORG_REPO::$ARCHIVE_NAME $NextcloudSnapConfig $NextcloudDataDir
@@ -154,9 +161,10 @@ nextcloud_complete() {
     chmod -R 770 $NextcloudDataDir 
     chown -R root:root $NextcloudDataDir
 
-    # DIsable maintenance mode
-    sudo nextcloud.occ maintenance:mode --off
-
+    # Disabling Maintenance Mode
+    echo "============ Disabling Maintenance Mode... ============"
+	sudo nextcloud.occ maintenance:mode --off
+    echo ""
 }
 
 # Check if an option was passed as an argument
@@ -164,13 +172,13 @@ if [[ ! -z $1 ]]; then
     # Execute the corresponding Restore option
     case $1 in
         1)
-            nextcloud_settings
+            nextcloud_settings $2
             ;;
         2)
-            nextcloud_data
+            nextcloud_data $2
             ;;
         3)
-            nextcloud_complete
+            nextcloud_complete $2
             ;;
         *)
             echo "Invalid option!"
