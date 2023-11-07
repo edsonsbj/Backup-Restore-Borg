@@ -60,6 +60,31 @@ if [ ! -w "$BackupDisk" ]; then
 fi
 
 # -------------------------------FUNCTIONS----------------------------------------- #
+# Obtaining file information and dates to be restored
+check_restore() {
+    # Check if the restoration date is specified
+    if [ -z "$ARCHIVE_DATE" ]
+    then
+        echo "Enter the restoration date (YYYY-MM-DD):"
+        read ARCHIVE_DATE
+    if [ -z "$ARCHIVE_DATE" ]
+    then
+        echo "No date provided. Going off script."
+        exit 1
+    fi
+ fi
+
+    # Find the backup file name corresponding to the specified date
+    ARCHIVE_NAME=$(borg list $BORG_REPO | grep $ARCHIVE_DATE | awk '{print $1}')
+
+    # Check if the backup file is found
+    if [ -z "$ARCHIVE_NAME" ]
+    then
+        echo "Could not find a backup file for the specified date: $ARCHIVE_DATE"
+        exit 1
+    fi
+
+}
 
 # Function to Nextcloud Maintenance Mode
 nextcloud_enable() {
@@ -114,12 +139,13 @@ nextcloud_settings() {
     chmod -R 755 $NextcloudConfig
     chown -R www-data:www-data $NextcloudConfig
 
-    # Removing unnecessary files
-    rm "$NextcloudConfig/nextclouddb.sql"
+    start_webserver    
 
     nextcloud_disable
 
-    start_webserver    
+    # Removing unnecessary files
+    rm "$NextcloudConfig/nextclouddb.sql"
+    rm -rf "$NextcloudConfig.old/"
 }
 
 # Function to restore Nextcloud DATA folder
@@ -171,12 +197,13 @@ nextcloud_complete() {
     chmod -R 770 $NextcloudDataDir 
     chown -R www-data:www-data $NextcloudDataDir
 
-    # Removing unnecessary files
-    rm "$NextcloudConfig/nextclouddb.sql"
-    
+    start_webserver
+
     nextcloud_disable
 
-    start_webserver
+    # Removing unnecessary files
+    rm "$NextcloudConfig/nextclouddb.sql"
+    rm -rf "$NextcloudConfig.old/"
 }
 
 # Check if an option was passed as an argument
@@ -231,7 +258,7 @@ fi
 # Worked well? Unmount.
 if [ "$?" = "0" ]; then
     echo ""
-    echo "========== Backup completed. The removable drive has been unmounted and powered off. =========="
+    echo "========== Restore completed. The removable drive has been unmounted and powered off. =========="
     umount "/dev/disk/by-uuid/$uuid"
     sudo udisksctl power-off -b "/dev/disk/by-uuid/$uuid"
 fi
