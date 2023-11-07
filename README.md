@@ -133,6 +133,3 @@ Here, the commands described above remain the same:
    sudo ./Restore.sh 2023-07-15 5
    ```
    Restore Nextcloud settings, database, and data folder, as well as Media Server settings.
-```
-
-This restructured README.md is well-organized, more concise, and easier to understand. Please remember to replace the URLs and paths with your own specific details as needed.
