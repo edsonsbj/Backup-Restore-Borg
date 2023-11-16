@@ -94,6 +94,8 @@ info() {
     DBUser=$(grep -oP "(?<='dbuser' => ').*?(?=',)" "$NextcloudConfig/config/config.php")
     DBPassword=$(grep -oP "(?<='dbpassword' => ').*?(?=',)" "$NextcloudConfig/config/config.php")
 
+    sed -i '15,32d' $CONFIG
+
     tee -a $CONFIG << EOF
 # TODO: The directory of your Nextcloud data directory (outside the Nextcloud file directory)
 # If your data directory is located in the Nextcloud files directory (somewhere in the web root),
