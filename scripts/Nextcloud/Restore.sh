@@ -85,6 +85,39 @@ check_restore() {
 
 }
 
+# Function for obtaining information from NextCloud
+info() {
+    # Obtaining Information for Restoration 
+    NextcloudDataDir=$(grep -oP "(?<='datadirectory' => ').*?(?=',)" "$NextcloudConfig/config/config.php")
+    DatabaseSystem=$(grep -oP "(?<='dbtype' => ').*?(?=',)" "$NextcloudConfig/config/config.php")
+    NextcloudDatabase=$(grep -oP "(?<='dbname' => ').*?(?=',)" "$NextcloudConfig/config/config.php")
+    DBUser=$(grep -oP "(?<='dbuser' => ').*?(?=',)" "$NextcloudConfig/config/config.php")
+    DBPassword=$(grep -oP "(?<='dbpassword' => ').*?(?=',)" "$NextcloudConfig/config/config.php")
+
+    tee -a $CONFIG << EOF
+# TODO: The directory of your Nextcloud data directory (outside the Nextcloud file directory)
+# If your data directory is located in the Nextcloud files directory (somewhere in the web root),
+# the data directory must not be a separate part of the backup
+NextcloudDataDir='$NextcloudDataDir'
+
+# TODO: The name of the database system (one of: mysql, mariadb, postgresql)
+# 'mysql' and 'mariadb' are equivalent, so when using 'mariadb', you could also set this variable to 'mysql' and vice versa.
+DatabaseSystem='$DatabaseSystem'
+
+# TODO: Your Nextcloud database name
+NextcloudDatabase='$NextcloudDatabase'
+
+# TODO: Your Nextcloud database user
+DBUser='$DBUser'
+
+# TODO: The password of the Nextcloud database user
+DBPassword='$DBPassword'
+
+EOF
+
+  clear 
+}
+
 # Function to Nextcloud Maintenance Mode
 nextcloud_enable() {
     # Enabling Maintenance Mode
@@ -129,10 +162,15 @@ nextcloud_settings() {
     # Extract Files
     borg extract -v --list $BORG_REPO::$ARCHIVE_NAME $NextcloudConfig
 
+    info
+
+    # Remove the Old Database and NextCloud User
+    mysql -e "DROP DATABASE $NextcloudDatabase;"
+    mysql -e "ALTER USER '$DBUser'@'localhost' IDENTIFIED BY '$DBPassword';"
+
     # Restore the database
-    mysql --host=localhost --user=$DBUser --password=$DBPassword -e "DROP DATABASE $NextcloudDatabase"
-    mysql --host=localhost --user=$DBUser --password=$DBPassword -e "CREATE DATABASE $NextcloudDatabase CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci"    
-    mysql --host=localhost --user=$DBUser --password=$DBPassword $NextcloudDatabase < "$NextcloudConfig/nextclouddb.sql"
+    mysql --user=$DBUser --password=$DBPassword -e "CREATE DATABASE $NextcloudDatabase CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci"    
+    mysql --user=$DBUser --password=$DBPassword $NextcloudDatabase < "$NextcloudConfig/nextclouddb.sql"
 
     # Restore permissions
     chmod -R 755 $NextcloudConfig
@@ -167,44 +205,6 @@ nextcloud_data() {
     nextcloud_disable
 }
 
-# Function to restore Nextcloud
-nextcloud_complete() {
-
-    check_restore
-
-    nextcloud_enable
-
-    stop_webserver
-
-    # Removing old versions 
-    mv $NextcloudConfig '$NextcloudConfig.old/'
-
-    echo "========== Restoring Nextcloud $( date )... =========="
-    echo ""
-
-    # Extract Files
-    borg extract -v --list $BORG_REPO::$ARCHIVE_NAME $NextcloudConfig $NextcloudDataDir
-
-    # Restore the database
-    mysql --host=localhost --user=$DBUser --password=$DBPassword -e "DROP DATABASE $NextcloudDatabase"
-    mysql --host=localhost --user=$DBUser --password=$DBPassword -e "CREATE DATABASE $NextcloudDatabase CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci"    
-    mysql --host=localhost --user=$DBUser --password=$DBPassword $NextcloudDatabase < "$NextcloudConfig/nextclouddb.sql"
-
-    # Restore permissions
-    chmod -R 755 $NextcloudConfig
-    chown -R www-data:www-data $NextcloudConfig
-    chmod -R 770 $NextcloudDataDir 
-    chown -R www-data:www-data $NextcloudDataDir
-
-    start_webserver
-
-    nextcloud_disable
-
-    # Removing unnecessary files
-    rm "$NextcloudConfig/nextclouddb.sql"
-    rm -rf "$NextcloudConfig.old/"
-}
-
 # Check if an option was passed as an argument
 if [[ ! -z $1 ]]; then
     # Execute the corresponding Restore option
@@ -212,11 +212,12 @@ if [[ ! -z $1 ]]; then
         1)
             nextcloud_settings $2
             ;;
-        2)
+        2)  
             nextcloud_data $2
             ;;
         3)
-            nextcloud_complete $2
+            nextcloud_settings $2
+            nextcloud_data $2  
             ;;
         *)
             echo "Invalid option!"
@@ -242,7 +243,8 @@ else
             nextcloud_data
             ;;
         3)
-            nextcloud_complete
+            nextcloud_settings $2
+            nextcloud_data $2  
             ;;
         4)
             echo "Leaving the script."
