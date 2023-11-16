@@ -1,7 +1,20 @@
 #!/bin/bash
 
-CONFIG="$(dirname "${BASH_SOURCE[0]}")/BackupRestore.conf"
-. $CONFIG
+# Make sure the script exits when any command fails
+set -Eeuo pipefail
+
+SCRIPT_DIR=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)
+CONFIG="$SCRIPT_DIR/BackupRestore.conf"
+
+# Check if config file exists
+if [ ! -f "$CONFIG" ]; then
+    echo "ERROR: Configuration file $CONFIG cannot be found!."
+    echo "Please make sure that a configuration file '$CONFIG' is present in the main directory of the scripts."
+    echo "This file can be created automatically using the setup.sh script."        
+    exit 1
+fi
+
+source "$CONFIG" || exit 1  # Read configuration variables
 
 ARCHIVE_DATE=$2
 
@@ -88,36 +101,18 @@ check_restore() {
 # Function for obtaining information from NextCloud
 info() {
     # Obtaining Information for Restoration 
-    NextcloudDataDir=$(grep -oP "(?<='datadirectory' => ').*?(?=',)" "$NextcloudConfig/config/config.php")
-    DatabaseSystem=$(grep -oP "(?<='dbtype' => ').*?(?=',)" "$NextcloudConfig/config/config.php")
-    NextcloudDatabase=$(grep -oP "(?<='dbname' => ').*?(?=',)" "$NextcloudConfig/config/config.php")
-    DBUser=$(grep -oP "(?<='dbuser' => ').*?(?=',)" "$NextcloudConfig/config/config.php")
-    DBPassword=$(grep -oP "(?<='dbpassword' => ').*?(?=',)" "$NextcloudConfig/config/config.php")
+    RestNextcloudDataDir=$(grep -oP "(?<='datadirectory' => ').*?(?=',)" "$NextcloudConfig/config/config.php")
+    RestDatabaseSystem=$(grep -oP "(?<='dbtype' => ').*?(?=',)" "$NextcloudConfig/config/config.php")
+    RestNextcloudDatabase=$(grep -oP "(?<='dbname' => ').*?(?=',)" "$NextcloudConfig/config/config.php")
+    RestDBUser=$(grep -oP "(?<='dbuser' => ').*?(?=',)" "$NextcloudConfig/config/config.php")
+    RestDBPassword=$(grep -oP "(?<='dbpassword' => ').*?(?=',)" "$NextcloudConfig/config/config.php")
 
-    sed -i '15,32d' $CONFIG
+    sed -i "/^NextcloudDataDir=/c\NextcloudDataDir='$RestNextcloudDataDir'" "$CONFIG"
+    sed -i "/^DatabaseSystem=/c\DatabaseSystem='$RestDatabaseSystem'" "$CONFIG"
+    sed -i "/^NextcloudDatabase=/c\NextcloudDatabase='$RestNextcloudDatabase'" "$CONFIG"
+    sed -i "/^DBUser=/c\DBUser='$RestDBUser'" "$CONFIG"
+    sed -i "/^DBPassword=/c\DBPassword='$RestDBPassword'" "$CONFIG"
 
-    tee -a $CONFIG << EOF
-# TODO: The directory of your Nextcloud data directory (outside the Nextcloud file directory)
-# If your data directory is located in the Nextcloud files directory (somewhere in the web root),
-# the data directory must not be a separate part of the backup
-NextcloudDataDir='$NextcloudDataDir'
-
-# TODO: The name of the database system (one of: mysql, mariadb, postgresql)
-# 'mysql' and 'mariadb' are equivalent, so when using 'mariadb', you could also set this variable to 'mysql' and vice versa.
-DatabaseSystem='$DatabaseSystem'
-
-# TODO: Your Nextcloud database name
-NextcloudDatabase='$NextcloudDatabase'
-
-# TODO: Your Nextcloud database user
-DBUser='$DBUser'
-
-# TODO: The password of the Nextcloud database user
-DBPassword='$DBPassword'
-
-EOF
-
-  clear 
 }
 
 # Function to Nextcloud Maintenance Mode
