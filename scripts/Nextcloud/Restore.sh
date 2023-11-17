@@ -8,15 +8,15 @@ CONFIG="$SCRIPT_DIR/BackupRestore.conf"
 
 # Check if config file exists
 if [ ! -f "$CONFIG" ]; then
-    echo "ERROR: Configuration file $CONFIG cannot be found!."
+    echo "ERROR: Configuration file $CONFIG cannot be found!"
     echo "Please make sure that a configuration file '$CONFIG' is present in the main directory of the scripts."
-    echo "This file can be created automatically using the setup.sh script."        
+    echo "This file can be created automatically using the setup.sh script."
     exit 1
 fi
 
-source "$CONFIG" || exit 1  # Read configuration variables
+source "$CONFIG"
 
-ARCHIVE_DATE=$2
+ARCHIVE_DATE=${2:-""}
 
 # Create a log file to record command outputs
 touch "$LogFile"
@@ -24,13 +24,15 @@ exec > >(tee -a "$LogFile")
 exec 2>&1
 
 # Function for error messages
-errorecho() { cat <<< "$@" 1>&2; } 
+errorecho() {
+    cat <<< "$@" 1>&2
+}
 
 ## ---------------------------------- TESTS ------------------------------ #
 # Check if the script is being executed by root or with sudo
-if [[ $EUID -ne 0 ]]; then
-   echo "========== This script needs to be executed as root or with sudo. ==========" 
-   exit 1
+if [ $EUID -ne 0 ]; then
+    echo "========== This script needs to be executed as root or with sudo. =========="
+    exit 1
 fi
 
 # Change to the root directory, and exit with an error message if it fails
@@ -42,31 +44,31 @@ else
     exit 1
 fi
 
+# Check if the unit is connected
 device=$(blkid -U "$uuid")
-
 if [ -z "$device" ]; then
-  echo "========== The unit with UUID $uuid Is not connected. Leaving the script.=========="
-  exit 1
+    echo "========== The unit with UUID $uuid is not connected. Leaving the script.=========="
+    exit 1
 fi
 
 echo "========== The unit with UUID $uuid is connected and corresponds to the device $device. =========="
 
 # Check that the unit is assembled
 if grep -qs "$BackupDisk" /proc/mounts; then
-  echo "========== The unit is assembled ==========."
+    echo "========== The unit is assembled. =========="
 else
-  echo "========== The unit is not assembled. Trying to assemble...=========="
+    echo "========== The unit is not assembled. Trying to assemble... =========="
 
-  # Try to assemble the unit
-  if mount "$device" "$BackupDisk"; then
-    echo "========== The unit was successfully assembled.=========="
-  else
-    echo "========== Failure when setting up the unit. Leaving the script.=========="
-    exit 1
-  fi
+    # Try to assemble the unit
+    if mount "$device" "$BackupDisk"; then
+        echo "========== The unit was successfully assembled. =========="
+    else
+        echo "========== Failure when setting up the unit. Leaving the script. =========="
+        exit 1
+    fi
 fi
 
-# Are there write and read permissions?
+# Check for write and read permissions
 if [ ! -w "$BackupDisk" ]; then
     echo "========== No write permissions =========="
     exit 1
@@ -113,6 +115,9 @@ info() {
     sed -i "/^DBUser=/c\DBUser='$RestDBUser'" "$CONFIG"
     sed -i "/^DBPassword=/c\DBPassword='$RestDBPassword'" "$CONFIG"
 
+    # Recharging the variables
+    source "$CONFIG"
+
 }
 
 # Function to Nextcloud Maintenance Mode
@@ -146,8 +151,6 @@ nextcloud_settings() {
 
     check_restore
 
-    nextcloud_enable
-
     stop_webserver
 
     # Removing old versions 
@@ -175,8 +178,6 @@ nextcloud_settings() {
 
     start_webserver    
 
-    nextcloud_disable
-
     # Removing unnecessary files
     rm "$NextcloudConfig/nextclouddb.sql"
     rm -rf "$NextcloudConfig.old/"
@@ -203,7 +204,7 @@ nextcloud_data() {
 }
 
 # Check if an option was passed as an argument
-if [[ ! -z $1 ]]; then
+if [[ ! -z ${1:-""} ]]; then
     # Execute the corresponding Restore option
     case $1 in
         1)
@@ -240,8 +241,8 @@ else
             nextcloud_data
             ;;
         3)
-            nextcloud_settings $2
-            nextcloud_data $2  
+            nextcloud_settings
+            nextcloud_data
             ;;
         4)
             echo "Leaving the script."
