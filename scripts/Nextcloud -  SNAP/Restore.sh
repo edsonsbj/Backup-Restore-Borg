@@ -1,9 +1,22 @@
 #!/bin/bash
 
-CONFIG="$(dirname "${BASH_SOURCE[0]}")/BackupRestore.conf"
-. $CONFIG
+# Make sure the script exits when any command fails
+set -Eeuo pipefail
 
-ARCHIVE_DATE=$2
+SCRIPT_DIR=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)
+CONFIG="$SCRIPT_DIR/BackupRestore.conf"
+
+# Check if config file exists
+if [ ! -f "$CONFIG" ]; then
+    echo "ERROR: Configuration file $CONFIG cannot be found!"
+    echo "Please make sure that a configuration file '$CONFIG' is present in the main directory of the scripts."
+    echo "This file can be created automatically using the setup.sh script."
+    exit 1
+fi
+
+source "$CONFIG"
+
+ARCHIVE_DATE=${2:-""}
 
 # Create a log file to record command outputs
 touch "$LogFile"
@@ -15,7 +28,7 @@ errorecho() { cat <<< "$@" 1>&2; }
 
 ## ---------------------------------- TESTS ------------------------------ #
 # Check if the script is being executed by root or with sudo
-if [[ $EUID -ne 0 ]]; then
+if [ $EUID -ne 0 ]; then
    echo "========== This script needs to be executed as root or with sudo. ==========" 
    exit 1
 fi
@@ -167,7 +180,7 @@ nextcloud_complete() {
 }
 
 # Check if an option was passed as an argument
-if [[ ! -z $1 ]]; then
+if [[ ! -z ${1:-""} ]]; then
     # Execute the corresponding Restore option
     case $1 in
         1)
