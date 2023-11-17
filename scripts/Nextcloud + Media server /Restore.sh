@@ -98,6 +98,26 @@ check_restore() {
 
 }
 
+# Function for obtaining information from NextCloud
+info() {
+    # Obtaining Information for Restoration 
+    RestNextcloudDataDir=$(grep -oP "(?<='datadirectory' => ').*?(?=',)" "$NextcloudConfig/config/config.php")
+    RestDatabaseSystem=$(grep -oP "(?<='dbtype' => ').*?(?=',)" "$NextcloudConfig/config/config.php")
+    RestNextcloudDatabase=$(grep -oP "(?<='dbname' => ').*?(?=',)" "$NextcloudConfig/config/config.php")
+    RestDBUser=$(grep -oP "(?<='dbuser' => ').*?(?=',)" "$NextcloudConfig/config/config.php")
+    RestDBPassword=$(grep -oP "(?<='dbpassword' => ').*?(?=',)" "$NextcloudConfig/config/config.php")
+
+    sed -i "/^NextcloudDataDir=/c\NextcloudDataDir='$RestNextcloudDataDir'" "$CONFIG"
+    sed -i "/^DatabaseSystem=/c\DatabaseSystem='$RestDatabaseSystem'" "$CONFIG"
+    sed -i "/^NextcloudDatabase=/c\NextcloudDatabase='$RestNextcloudDatabase'" "$CONFIG"
+    sed -i "/^DBUser=/c\DBUser='$RestDBUser'" "$CONFIG"
+    sed -i "/^DBPassword=/c\DBPassword='$RestDBPassword'" "$CONFIG"
+
+    # Recharging the variables
+    source "$CONFIG"
+
+}
+
 # Function to Nextcloud Maintenance Mode
 nextcloud_enable() {
     # Enabling Maintenance Mode
@@ -140,23 +160,26 @@ nextcloud_settings() {
 
     check_restore
 
-    nextcloud_enable
-
     stop_webserver
 
     # Removing old versions 
-    mv $NextcloudConfig '$NextcloudConfig.old/'
-
+    mv $NextcloudConfig "$NextcloudConfig.old/"
+    
     echo "========== Restoring Nextcloud settings $( date )... =========="
     echo ""
 
     # Extract Files
     borg extract -v --list $BORG_REPO::$ARCHIVE_NAME $NextcloudConfig
 
+    info
+
+    # Remove the Old Database and NextCloud User
+    mysql -e "DROP DATABASE $NextcloudDatabase;"
+    mysql -e "ALTER USER '$DBUser'@'localhost' IDENTIFIED BY '$DBPassword';"
+
     # Restore the database
-    mysql --host=localhost --user=$DBUser --password=$DBPassword -e "DROP DATABASE $NextcloudDatabase"
-    mysql --host=localhost --user=$DBUser --password=$DBPassword -e "CREATE DATABASE $NextcloudDatabase CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci"    
-    mysql --host=localhost --user=$DBUser --password=$DBPassword $NextcloudDatabase < "$NextcloudConfig/nextclouddb.sql"
+    mysql --user=$DBUser --password=$DBPassword -e "CREATE DATABASE $NextcloudDatabase CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci"    
+    mysql --user=$DBUser --password=$DBPassword $NextcloudDatabase < "$NextcloudConfig/nextclouddb.sql"
 
     # Restore permissions
     chmod -R 755 $NextcloudConfig
@@ -164,8 +187,6 @@ nextcloud_settings() {
 
     start_webserver    
 
-    nextcloud_disable
-    
     # Removing unnecessary files
     rm "$NextcloudConfig/nextclouddb.sql"
     rm -rf "$NextcloudConfig.old/"
@@ -191,136 +212,30 @@ nextcloud_data() {
     nextcloud_disable
 }
 
-# Function to restore Nextcloud 
-nextcloud_complete() {
-
-    check_restore
-
-    nextcloud_enable
-
-    stop_webserver
-
-    # Removing old versions 
-    mv $NextcloudConfig '$NextcloudConfig.old/'
-
-    echo "========== Restoring Nextcloud $( date )... =========="
-    echo ""
-
-    # Extract Files
-    borg extract -v --list $BORG_REPO::$ARCHIVE_NAME $NextcloudConfig $NextcloudDataDir
-
-    # Restore the database
-    mysql --host=localhost --user=$DBUser --password=$DBPassword -e "DROP DATABASE $NextcloudDatabase"
-    mysql --host=localhost --user=$DBUser --password=$DBPassword -e "CREATE DATABASE $NextcloudDatabase CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci"    
-    mysql --host=localhost --user=$DBUser --password=$DBPassword $NextcloudDatabase < "$NextcloudConfig/nextclouddb.sql"
-
-    # Restore permissions
-    chmod -R 755 $NextcloudConfig
-    chown -R www-data:www-data $NextcloudConfig
-    chmod -R 770 $NextcloudDataDir 
-    chown -R www-data:www-data $NextcloudDataDir
-
-    start_webserver
-
-    nextcloud_disable
-
-    # Removing unnecessary files
-    rm "$NextcloudConfig/nextclouddb.sql"
-    rm -rf "$NextcloudConfig.old/"
-}
-
 # Function to restore Nextcloud and Media Server settings
-nextcloud_mediaserver_settings() {
+mediaserver_settings() {
 
     check_restore
 
-    nextcloud_enable
-
-    stop_webserver
-
     stop_mediaserver
 
-    # Removing old versions 
-    mv $NextcloudConfig '$NextcloudConfig.old/'
+    # Remove the current folder
     mv "$MediaserverConf" "$MediaserverConf.old/"
 
-    echo "========== Restoring Nextcloud settings $( date )... =========="
+    echo "========== Restoring Nextcloud Settings and Media Server Settings $( date )... =========="
     echo ""
 
     # Extract Files
-    borg extract -v --list $BORG_REPO::$ARCHIVE_NAME $NextcloudConfig "$MediaserverConf"
-
-    # Restore the database
-    mysql --host=localhost --user=$DBUser --password=$DBPassword -e "DROP DATABASE $NextcloudDatabase"
-    mysql --host=localhost --user=$DBUser --password=$DBPassword -e "CREATE DATABASE $NextcloudDatabase CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci"    
-    mysql --host=localhost --user=$DBUser --password=$DBPassword $NextcloudDatabase < "$NextcloudConfig/nextclouddb.sql"
+    borg extract -v --list $BORG_REPO::$ARCHIVE_NAME "$MediaserverConf"
 
     # Restore permissions
-    chmod -R 755 $NextcloudConfig
-    chown -R www-data:www-data $NextcloudConfig
     chmod -R 755 $MediaserverConf
     chown -R $MediaserverUser:$MediaserverUser $MediaserverConf
 
     # Add the Media Server User to the www-data group to access Nextcloud folders
-    sudo adduser $MediaserverUser www-data
-
-    start_webserver
+    sudo adduser $MediaserverUser root
 
     start_mediaserver
-
-    nextcloud_disable
-
-    # Removing unnecessary files
-    rm "$NextcloudConfig/nextclouddb.sql"
-    rm -rf "$NextcloudConfig.old/"
-    rm -rf "$MediaserverConf.old/"
-}
-
-# Function to perform a complete Nextcloud and Media Server Settings restore
-nextcloud_mediaserver_complete() {
-
-    check_restore
-
-    nextcloud_enable
-
-    stop_webserver
-
-    stop_mediaserver
-
-    # Removing old versions 
-    mv $NextcloudConfig '$NextcloudConfig.old/'
-    mv "$MediaserverConf" "$MediaserverConf.old/"
-
-    echo "========== Restoring Nextcloud settings $( date )... =========="
-    echo ""
-
-    # Extract Files
-    borg extract -v --list $BORG_REPO::$ARCHIVE_NAME "$NextcloudConfig" "$NextcloudDataDir" "$MediaserverConf"
-
-    # Restore the database
-    mysql --host=localhost --user=$DBUser --password=$DBPassword -e "DROP DATABASE $NextcloudDatabase"
-    mysql --host=localhost --user=$DBUser --password=$DBPassword -e "CREATE DATABASE $NextcloudDatabase CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci"    
-    mysql --host=localhost --user=$DBUser --password=$DBPassword $NextcloudDatabase < "$NextcloudConfig/nextclouddb.sql"
-
-    # Restore permissions
-    chmod -R 755 $NextcloudConfig
-    chown -R www-data:www-data $NextcloudConfig
-    chmod -R 755 $MediaserverConf
-    chown -R $MediaserverUser:$MediaserverUser $MediaserverConf
-
-    # Add the Media Server User to the www-data group to access Nextcloud folders
-    sudo adduser $MediaserverUser www-data
-
-    start_webserver
-
-    start_mediaserver
-
-    nextcloud_disable
-
-    # Removing unnecessary files
-    rm "$NextcloudConfig/nextclouddb.sql"
-    rm -rf "$NextcloudConfig.old/"
-    rm -rf "$MediaserverConf.old/"
 }
 
 # Check if an option was passed as an argument
@@ -334,14 +249,18 @@ if [[ ! -z ${1:-""} ]]; then
             nextcloud_data $2
             ;;
         3)
-            nextcloud_complete $2
-            ;;
+            nextcloud_settings $2
+            nextcloud_data $2
+            ;;  
         4)
-            nextcloud_mediaserver_settings $2
+            nextcloud_settings $2
+            mediaserver_settings $2
             ;;
         5)
-            nextcloud_mediaserver_complete $2
-            ;;               
+            nextcloud_settings $2
+            nextcloud_data $2
+            mediaserver_settings $2
+            ;;            
         *)
             echo "Invalid option!"
             ;;
@@ -368,14 +287,18 @@ else
             nextcloud_data
             ;;
         3)
-            nextcloud_complete
-            ;;
+            nextcloud_settings
+            nextcloud_data
+            ;;  
         4)
-            nextcloud_mediaserver_settings
+            nextcloud_settings
+            mediaserver_settings
             ;;
         5)
-            nextcloud_mediaserver_complete
-            ;;             
+            nextcloud_settings
+            nextcloud_data
+            mediaserver_settings
+            ;;            
         6)
             echo "Leaving the script."
             exit 0

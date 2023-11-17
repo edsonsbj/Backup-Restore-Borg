@@ -119,7 +119,7 @@ nextcloud_complete() {
     # Enable maintenance mode
     sudo nextcloud.occ maintenance:mode --on
 
-    borg create $BORG_OPTS ::'NextcloudData-{now:%Y%m%d-%H%M}' "$NextcloudSnapConfig" "$NextcloudDataDir" --exclude "$NextcloudDataDir/*/files_trashbin"
+    borg create $BORG_OPTS ::'NextcloudFull-{now:%Y%m%d-%H%M}' "$NextcloudSnapConfig" "$NextcloudDataDir" --exclude "$NextcloudDataDir/*/files_trashbin"
 
     backup_exit=$?
 

@@ -144,41 +144,6 @@ nextcloud_data() {
     echo ""
 }
 
-# Function to restore Nextcloud
-nextcloud_complete() {
-
-    check_restore
-
-    # Enabling Maintenance Mode
-    echo "============ Enabling Maintenance Mode... ============"
-	sudo nextcloud.occ maintenance:mode --on
-    echo ""
-
-    # Enable Midias Removevel
-    sudo snap connect nextcloud:removable-media
-
-    echo "========== Restoring Nextcloud $( date )... =========="
-    echo ""
-
-    # Extract Files
-    borg extract -v --list $BORG_REPO::$ARCHIVE_NAME $NextcloudSnapConfig $NextcloudDataDir
-
-    # Import the settings and database
-    sudo nextcloud.import -abc $NextcloudSnapConfig
-
-    # Removing unnecessary files
-    rm -rf $NextcloudSnapConfig 
-
-    # Restore permissions
-    chmod -R 770 $NextcloudDataDir 
-    chown -R root:root $NextcloudDataDir
-
-    # Disabling Maintenance Mode
-    echo "============ Disabling Maintenance Mode... ============"
-	sudo nextcloud.occ maintenance:mode --off
-    echo ""
-}
-
 # Check if an option was passed as an argument
 if [[ ! -z ${1:-""} ]]; then
     # Execute the corresponding Restore option
@@ -190,8 +155,9 @@ if [[ ! -z ${1:-""} ]]; then
             nextcloud_data $2
             ;;
         3)
-            nextcloud_complete $2
-            ;;
+            nextcloud_settings $2
+            nextcloud_data $2
+            ;;  
         *)
             echo "Invalid option!"
             ;;
@@ -216,8 +182,9 @@ else
             nextcloud_data
             ;;
         3)
-            nextcloud_complete
-            ;;
+            nextcloud_settings
+            nextcloud_data
+            ;;  
         *)
             echo "Invalid option!"
             ;;

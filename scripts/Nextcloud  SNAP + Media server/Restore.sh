@@ -156,43 +156,8 @@ nextcloud_data() {
     echo ""
 }
 
-# Function to restore Nextcloud
-nextcloud_complete() {
-
-    check_restore
-
-    # Enabling Maintenance Mode
-    echo "============ Enabling Maintenance Mode... ============"
-	sudo nextcloud.occ maintenance:mode --on
-    echo ""
-
-    # Enable Midias Removevel
-    sudo snap connect nextcloud:removable-media
-
-    echo "========== Restoring Nextcloud $( date )... =========="
-    echo ""
-
-    # Extract Files
-    borg extract -v --list $BORG_REPO::$ARCHIVE_NAME $NextcloudSnapConfig $NextcloudDataDir
-
-    # Import the settings and database
-    sudo nextcloud.import -abc $NextcloudSnapConfig
-
-    # Removing unnecessary files
-    rm -rf $NextcloudSnapConfig 
-
-    # Restore permissions
-    chmod -R 770 $NextcloudDataDir 
-    chown -R root:root $NextcloudDataDir
-
-    # Disabling Maintenance Mode
-    echo "============ Disabling Maintenance Mode... ============"
-	sudo nextcloud.occ maintenance:mode --off
-    echo ""
-}
-
 # Function to restore Nextcloud and Media Server settings
-nextcloud_mediaserver_settings() {
+mediaserver_settings() {
 
     check_restore
 
@@ -205,13 +170,7 @@ nextcloud_mediaserver_settings() {
     echo ""
 
     # Extract Files
-    borg extract -v --list $BORG_REPO::$ARCHIVE_NAME $NextcloudSnapConfig "$MediaserverConf"
-
-    # Enable removable media
-    sudo snap connect nextcloud:removable-media
-
-    # Import the settings and database
-    sudo nextcloud.import -abc $NextcloudSnapConfig
+    borg extract -v --list $BORG_REPO::$ARCHIVE_NAME "$MediaserverConf"
 
     # Restore permissions
     chmod -R 755 $MediaserverConf
@@ -221,56 +180,6 @@ nextcloud_mediaserver_settings() {
     sudo adduser $MediaserverUser root
 
     start_mediaserver
-
-    # Removing unnecessary files
-    rm -rf $NextcloudSnapConfig 
-}
-
-# Function to restore Nextcloud Complete and Media Server settings
-nextcloud_mediaserver_complete() {
-
-    check_restore
-
-    stop_mediaserver
-
-    # Remove the current folder
-    mv "$MediaserverConf" "$MediaserverConf.old/"
-
-    # Enabling Maintenance Mode
-    echo "============ Enabling Maintenance Mode... ============"
-	sudo nextcloud.occ maintenance:mode --on
-    echo ""
-
-    echo "========== Restoring all Nextcloud and Media Server settings  $( date )... =========="
-    echo ""
-
-    # Extract Files
-    borg extract -v --list $BORG_REPO::$ARCHIVE_NAME "$NextcloudSnapConfig" "$NextcloudDataDir" "$MediaserverConf"
-
-    # Enable Midias Removevel
-    sudo snap connect nextcloud:removable-media
-
-    # Import the settings and database
-    sudo nextcloud.import -abc $NextcloudSnapConfig
-
-    # Restore permissions
-    chmod -R 755 $MediaserverConf
-    chown -R $MediaserverUser:$MediaserverUser "$MediaserverConf"
-    chmod -R 770 $NextcloudDataDir 
-    chown -R root:root $NextcloudDataDir
-
-    # Disabling Maintenance Mode
-    echo "============ Disabling Maintenance Mode... ============"
-	sudo nextcloud.occ maintenance:mode --off
-    echo ""
-
-    # Add the Media Server User to the www-data group to access Nextcloud folders
-    sudo adduser $MediaserverUser root
-
-    start_mediaserver
-
-    # Removing unnecessary files
-    rm -rf $NextcloudSnapConfig 
 }
 
 # Check if an option was passed as an argument
@@ -284,14 +193,18 @@ if [[ ! -z ${1:-""} ]]; then
             nextcloud_data $2
             ;;
         3)
-            nextcloud_complete $2
-            ;;
+            nextcloud_settings $2
+            nextcloud_data $2
+            ;;  
         4)
-            nextcloud_mediaserver_settings $2
+            nextcloud_settings $2
+            mediaserver_settings $2
             ;;
         5)
-            nextcloud_mediaserver_complete $2
-            ;;               
+            nextcloud_settings $2
+            nextcloud_data $2
+            mediaserver_settings $2
+            ;;            
         *)
             echo "Invalid option!"
             ;;
@@ -318,14 +231,18 @@ else
             nextcloud_data
             ;;
         3)
-            nextcloud_complete
-            ;;
+            nextcloud_settings
+            nextcloud_data
+            ;;  
         4)
-            nextcloud_mediaserver_settings
+            nextcloud_settings
+            mediaserver_settings
             ;;
         5)
-            nextcloud_mediaserver_complete
-            ;;             
+            nextcloud_settings
+            nextcloud_data
+            mediaserver_settings
+            ;;            
         6)
             echo "Leaving the script."
             exit 0
