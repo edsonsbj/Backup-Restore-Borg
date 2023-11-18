@@ -233,7 +233,7 @@ mediaserver_settings() {
     chown -R $MediaserverUser:$MediaserverUser $MediaserverConf
 
     # Add the Media Server User to the www-data group to access Nextcloud folders
-    sudo adduser $MediaserverUser root
+    sudo adduser $MediaserverUser www-data
 
     start_mediaserver
 }

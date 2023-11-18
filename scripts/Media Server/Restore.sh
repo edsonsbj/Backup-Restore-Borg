@@ -118,9 +118,6 @@ Restore() {
     chmod -R 755 $MediaserverConf
     chown -R $MediaserverUser:$MediaserverUser $MediaserverConf
 
-    # Add the Media Server User to the www-data group to access Nextcloud folders
-    sudo adduser $MediaserverUser www-data
-
     # Start Media Server
     sudo systemctl start $MediaserverService
 
